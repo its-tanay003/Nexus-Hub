@@ -1,3 +1,4 @@
+
 import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
 
@@ -48,24 +49,35 @@ export class SocketService {
     this.io.of('/security').on('connection', (socket) => {
       console.log(`Security Monitor Connected: ${socket.id}`);
     });
+
+    // 4. Academic Namespace (Timetable)
+    this.io.of('/academic').on('connection', (socket) => {
+        console.log(`Student subscribing to Timetable Updates: ${socket.id}`);
+        socket.join('timetable-updates');
+    });
   }
 
   // --- Broadcasting Methods ---
 
   public broadcastMessStats(stats: any) {
     if (this.io) {
-      // Broadcast to 'live-updates' room in '/mess' namespace
       this.io.of('/mess').emit('CROWD_UPDATE', stats);
     }
   }
 
   public broadcastCriticalAlert(alertData: any) {
     if (this.io) {
-        // Broadcast to security namespace
         this.io.of('/security').emit('CRITICAL_ALERT', alertData);
-        // Also broadcast to general namespace if needed (e.g. "Stay clear of X")
         console.log("CRITICAL ALERT BROADCASTED:", alertData);
     }
+  }
+
+  public broadcastScheduleUpdate(updateData: any) {
+      if (this.io) {
+          // Broadcast to everyone in academic namespace for simplicity
+          // In prod, you might emit to specific course rooms: `course:${subjectId}`
+          this.io.of('/academic').emit('SCHEDULE_UPDATE', updateData);
+      }
   }
 
   public sendNotification(userId: string, notification: any) {

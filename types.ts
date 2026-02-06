@@ -9,6 +9,33 @@ export interface User {
   department?: string;
 }
 
+// ... existing types ...
+
+export interface TimetableSchedule {
+  id: string;
+  dayOfWeek: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+  startTime: string; // "HH:mm"
+  endTime: string;   // "HH:mm"
+  type: 'LECTURE' | 'LAB' | 'TUTORIAL' | 'WORKSHOP';
+  notes?: string;
+  subject: {
+    name: string;
+    code: string;
+  };
+  classroom: {
+    number: string;
+    block: {
+      name: string;
+      code: string;
+    };
+  };
+  teacher: {
+    name: string;
+    email: string;
+    avatarUrl?: string;
+  };
+}
+
 export interface StudentProfile {
   id: string;
   userId: string;
@@ -32,8 +59,8 @@ export interface MessMenuItem {
   calories: number;
   protein?: number;
   carbs?: number;
-  rating: number; // 1-5
-  crowdLevel: number; // 0-100%
+  rating: number; 
+  crowdLevel: number; 
   waitTimes?: string;
   timeRange?: string;
 }
@@ -81,7 +108,6 @@ export interface NearbyHub {
   image?: string;
 }
 
-// Attendance Types
 export interface AttendanceSummary {
   subjectId: string;
   subjectName: string;
