@@ -14,18 +14,19 @@ import safetyRoutes from './modules/safety/safety.routes';
 import marketplaceRoutes from './modules/marketplace/marketplace.routes';
 import wellbeingRoutes from './modules/wellbeing/wellbeing.routes';
 import profileRoutes from './modules/profile/profile.routes';
+import attendanceRoutes from './modules/attendance/attendance.routes';
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(helmet({
-  crossOriginResourcePolicy: false, // Allow loading images from different origins/same origin correctly
+  crossOriginResourcePolicy: false, 
 }));
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Static File Serving (For Profile Photos)
+// Static File Serving
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
@@ -37,6 +38,7 @@ app.use('/api/v1/safety', safetyRoutes);
 app.use('/api/v1/marketplace', marketplaceRoutes);
 app.use('/api/v1/wellbeing', wellbeingRoutes);
 app.use('/api/v1/profile', profileRoutes);
+app.use('/api/v1/attendance', attendanceRoutes);
 
 // Health Check
 app.get('/', (req, res) => {
