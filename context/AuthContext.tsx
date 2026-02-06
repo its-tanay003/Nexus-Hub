@@ -10,6 +10,13 @@ interface AuthContextType {
   login: (token: string, user: User) => void;
   logout: () => void;
   loading: boolean;
+  
+  // Conditional Auth State
+  isLoginModalOpen: boolean;
+  openLoginModal: (redirectAfterLogin?: string) => void;
+  closeLoginModal: () => void;
+  pendingRedirect: string | null;
+  clearPendingRedirect: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,6 +25,10 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Modal State
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
 
   useEffect(() => {
     // Check local storage on load
@@ -29,7 +40,6 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       try {
         setUser(JSON.parse(storedUser));
       } catch (e) {
-        // Corrupt storage
         localStorage.removeItem('user');
       }
     }
@@ -41,6 +51,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
     setUser(newUser);
     localStorage.setItem('token', newToken);
     localStorage.setItem('user', JSON.stringify(newUser));
+    setIsLoginModalOpen(false); // Close modal on success
   };
 
   const logout = () => {
@@ -48,14 +59,40 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    // Call backend logout to clear HTTP-only cookies
     fetch('http://localhost:4000/api/v1/auth/logout', { method: 'POST' }).catch(console.error);
+  };
+
+  const openLoginModal = (redirectPath?: string) => {
+    if (redirectPath) setPendingRedirect(redirectPath);
+    setIsLoginModalOpen(true);
+  };
+
+  const closeLoginModal = () => {
+    setIsLoginModalOpen(false);
+    setPendingRedirect(null);
+  };
+
+  const clearPendingRedirect = () => {
+      setPendingRedirect(null);
   };
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SECURITY';
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, isAdmin, login, logout, loading }}>
+    <AuthContext.Provider value={{ 
+        user, 
+        token, 
+        isAuthenticated: !!user, 
+        isAdmin, 
+        login, 
+        logout, 
+        loading,
+        isLoginModalOpen,
+        openLoginModal,
+        closeLoginModal,
+        pendingRedirect,
+        clearPendingRedirect
+    }}>
       {children}
     </AuthContext.Provider>
   );

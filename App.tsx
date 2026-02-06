@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import SOSButton from './components/SOSButton';
 import Dashboard from './components/Dashboard';
 import AcademicCockpit from './components/AcademicCockpit';
@@ -8,38 +8,56 @@ import ExplorersGuide from './components/ExplorersGuide';
 import LoginModal from './components/LoginModal'; 
 import ProfilePage from './components/ProfilePage';
 import AttendanceDashboard from './components/AttendanceDashboard'; 
-import TimetableDashboard from './components/Timetable/TimetableDashboard'; // Import
+import TimetableDashboard from './components/Timetable/TimetableDashboard'; 
 import { useAuth } from './context/AuthContext'; 
 
 const App: React.FC = () => {
-  const { isAuthenticated, logout, user } = useAuth(); 
+  const { isAuthenticated, logout, user, openLoginModal, pendingRedirect, clearPendingRedirect } = useAuth(); 
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Handle Redirect after Login
+  useEffect(() => {
+    if (isAuthenticated && pendingRedirect) {
+      setActiveTab(pendingRedirect);
+      clearPendingRedirect();
+    }
+  }, [isAuthenticated, pendingRedirect, clearPendingRedirect]);
 
   const handleSOSTrigger = async (coords: { lat: number; lng: number }) => {
     console.log("SENDING SOS TO BACKEND:", coords);
     await new Promise(resolve => setTimeout(resolve, 1000));
   };
 
+  // --- NAVIGATION INTERCEPTION LOGIC ---
+  const handleNavClick = (tabId: string, protectedRoute: boolean) => {
+    if (protectedRoute && !isAuthenticated) {
+      openLoginModal(tabId); // Pass the intended tab as redirect target
+    } else {
+      setActiveTab(tabId);
+    }
+  };
+
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg> },
-    { id: 'timetable', label: 'Timetable', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> }, // Added
-    { id: 'attendance', label: 'Attendance', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg> },
-    { id: 'mess', label: 'Mess Menu', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg> },
-    { id: 'academics', label: 'Academics', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> },
-    { id: 'marketplace', label: 'Marketplace', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg> },
-    { id: 'explore', label: 'Explore', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg> },
-    { id: 'profile', label: 'My Profile', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg> },
+    { id: 'dashboard', label: 'Dashboard', protected: false, icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg> },
+    { id: 'mess', label: 'Mess Menu', protected: false, icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg> },
+    { id: 'explore', label: 'Explore', protected: false, icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg> },
+    // Protected Routes Below
+    { id: 'timetable', label: 'Timetable', protected: true, icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
+    { id: 'attendance', label: 'Attendance', protected: true, icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg> },
+    { id: 'academics', label: 'Academics', protected: true, icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> },
+    { id: 'marketplace', label: 'Marketplace', protected: true, icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg> },
+    { id: 'profile', label: 'My Profile', protected: true, icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg> },
   ];
 
   return (
     <div className="min-h-screen bg-gray-50 flex font-sans text-gray-800">
       
-      {/* Login Modal Overlay */}
+      {/* Global Login Modal (Controlled via Context) */}
       <LoginModal />
 
       {/* Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-100 fixed inset-y-0 z-20">
-        <div className="p-6 flex items-center gap-3">
+        <div className="p-6 flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
            <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-white font-bold font-display">N</div>
            <span className="font-bold text-xl text-gray-900 tracking-tight">Nexus</span>
         </div>
@@ -48,17 +66,20 @@ const App: React.FC = () => {
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              disabled={!isAuthenticated} 
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors
+              onClick={() => handleNavClick(item.id, item.protected)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors justify-between group
                 ${activeTab === item.id 
                   ? 'bg-blue-50 text-blue-600' 
                   : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}
-                ${!isAuthenticated ? 'opacity-50 cursor-not-allowed' : ''}
               `}
             >
-              {item.icon}
-              {item.label}
+              <div className="flex items-center gap-3">
+                {item.icon}
+                {item.label}
+              </div>
+              {item.protected && !isAuthenticated && (
+                <svg className="w-3 h-3 text-gray-300 group-hover:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+              )}
             </button>
           ))}
         </nav>
@@ -82,13 +103,18 @@ const App: React.FC = () => {
                 </button>
              </div>
            ) : (
-             <div className="text-center text-xs text-gray-400">Please Sign In</div>
+             <button 
+                onClick={() => openLoginModal()}
+                className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20"
+             >
+                Sign In
+             </button>
            )}
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className={`flex-1 md:ml-64 flex flex-col min-w-0 transition-all ${!isAuthenticated ? 'blur-sm pointer-events-none select-none overflow-hidden h-screen' : ''}`}>
+      <div className={`flex-1 md:ml-64 flex flex-col min-w-0 transition-all`}>
          
          {/* Top Bar */}
          <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-6 sticky top-0 z-10">
@@ -105,9 +131,12 @@ const App: React.FC = () => {
                </div>
             </div>
             <div className="flex items-center gap-4">
+               {!isAuthenticated && (
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">Guest Mode</span>
+               )}
                <button className="relative text-gray-500 hover:text-gray-900">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                  {isAuthenticated && <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>}
                </button>
             </div>
          </header>
