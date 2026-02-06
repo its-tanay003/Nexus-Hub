@@ -1,0 +1,37 @@
+{
+  "name": "universe-ai---next-gen-campus",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "@google/genai": "^1.40.0",
+    "express": "^5.2.1",
+    "http": "^0.0.1-security",
+    "@prisma/client": "^7.3.0",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.7.4",
+    "helmet": "^8.1.0",
+    "cors": "^2.8.6",
+    "morgan": "^1.10.1",
+    "@supabase/supabase-js": "^2.39.7",
+    "jsonwebtoken": "^9.0.3",
+    "bcryptjs": "^3.0.3",
+    "crypto": "^1.0.1",
+    "path": "^0.12.7",
+    "multer": "^2.0.2",
+    "fs": "^0.0.1-security"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

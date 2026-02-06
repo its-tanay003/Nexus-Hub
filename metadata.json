@@ -1,0 +1,9 @@
+{
+  "name": "UniVerse AI - Next Gen Campus",
+  "description": "An autonomous university ecosystem app featuring AI mail summarization, real-time mess tracking, and critical SOS safety systems.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
