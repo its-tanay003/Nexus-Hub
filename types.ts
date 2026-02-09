@@ -74,6 +74,8 @@ export interface MailSummary {
   type?: 'Academic' | 'Event' | 'Lost & Found' | 'General';
   timestamp: Date;
   timeAgo?: string;
+  isFallback?: boolean;
+  fallbackReason?: string;
 }
 
 export interface Announcement {

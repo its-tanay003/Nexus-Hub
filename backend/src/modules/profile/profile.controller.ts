@@ -1,4 +1,3 @@
-
 import { Request, Response } from 'express';
 import { prisma } from '../../utils/prisma';
 import path from 'path';
@@ -87,7 +86,8 @@ export const uploadProfilePhoto = async (req: Request, res: Response) => {
     // 3. Cleanup Old File (Optional but recommended)
     if (oldProfile?.avatarUrl) {
       const oldFilename = path.basename(oldProfile.avatarUrl);
-      const oldPath = path.join(__dirname, '../../uploads/avatars', oldFilename);
+      // Replaced process.cwd() with path.resolve('.') to avoid type errors
+      const oldPath = path.join(path.resolve('.'), 'uploads/avatars', oldFilename);
       if (fs.existsSync(oldPath)) {
         fs.unlinkSync(oldPath);
       }

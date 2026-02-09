@@ -1,75 +1,60 @@
-import { GoogleGenAI } from "@google/genai";
+
 import { MailSummary } from "../types";
 
-const processEmailSummary = async (rawText: string, sender: string, subject: string): Promise<MailSummary> => {
+// Helper to interact with the backend AI service
+const summarizeViaBackend = async (subject: string, body: string): Promise<MailSummary> => {
   try {
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-      throw new Error("API Key missing");
-    }
-
-    const ai = new GoogleGenAI({ apiKey });
-    
-    // We use gemini-3-flash-preview for fast, low-latency summarization
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `
-        You are an AI assistant for a university student app.
-        Summarize the following email into a SINGLE concise sentence (max 15 words).
-        Determine if it is "urgent" (e.g., deadline changes, cancellations, security).
-        
-        Return JSON format: { "summary": "string", "urgent": boolean }
-        
-        Email Subject: ${subject}
-        Email Body: ${rawText}
-      `,
-       config: {
-        responseMimeType: "application/json",
-      },
+    // Try to connect to backend
+    const response = await fetch('http://localhost:4000/api/v1/ai/summarize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, body })
     });
 
-    const jsonText = response.text || "{}";
-    const parsed = JSON.parse(jsonText);
-
-    return {
-      id: Math.random().toString(36).substr(2, 9),
-      sender,
-      subject,
-      summary: parsed.summary || "Could not summarize.",
-      urgent: parsed.urgent || false,
-      timestamp: new Date(),
-    };
-
-  } catch (error: any) {
-    // Handle Rate Limiting / Quota Exceeded specifically
-    if (error.toString().includes("429") || error?.status === 429 || error?.code === 429) {
-      console.warn("Gemini API Quota Exceeded. Using fallback summary.");
-      return {
-        id: Math.random().toString(36).substr(2, 9),
-        sender,
-        subject,
-        // Simple fallback: truncate the body or use the subject
-        summary: rawText.length > 50 ? rawText.substring(0, 50) + "..." : rawText, 
-        urgent: false,
-        timestamp: new Date(),
-      };
+    if (!response.ok) {
+        throw new Error(`Server Error: ${response.status}`);
     }
 
-    console.error("Gemini Summarization Failed:", error);
-    // Fallback if AI fails for other reasons
+    const json = await response.json();
+    const result = json.data;
+
     return {
       id: Math.random().toString(36).substr(2, 9),
-      sender,
+      sender: "System", // In a real app, this comes from the email
       subject,
-      summary: subject + " (AI Unavailable)",
+      summary: result.summary,
+      urgent: result.urgent,
+      type: result.category,
+      timestamp: new Date(),
+      timeAgo: "Just now",
+      // Pass through fallback flags for UI
+      isFallback: result.isFallback,
+      fallbackReason: result.fallbackReason
+    } as MailSummary & { isFallback?: boolean, fallbackReason?: string }; 
+
+  } catch (error: any) {
+    // Differentiate between Network Error (Backend down) and Application Error
+    if (error.message === 'Failed to fetch') {
+        console.warn("Backend Unreachable: Using offline fallback.");
+    } else {
+        console.error("AI Service Error:", error);
+    }
+
+    // Client-side Fallback if backend is unreachable
+    return {
+      id: Math.random().toString(36).substr(2, 9),
+      sender: "System",
+      subject,
+      summary: body.substring(0, 50) + "... (Offline Mode)",
       urgent: false,
       timestamp: new Date(),
-    };
+      isFallback: true,
+      fallbackReason: "Network Error"
+    } as any;
   }
 };
 
 export const fetchSimulatedMailSummaries = async (): Promise<MailSummary[]> => {
-  // Simulating an inbox to feed the AI
   const mockEmails = [
     {
       sender: "Registrar Office",
@@ -90,13 +75,13 @@ export const fetchSimulatedMailSummaries = async (): Promise<MailSummary[]> => {
 
   const summaries: MailSummary[] = [];
   
-  // In a real app, this would be a backend worker. Here we do it client-side for demo.
-  for (const email of mockEmails) {
-    // Artificial delay to prevent rate limits in demo
-    await new Promise(r => setTimeout(r, 500)); // Increased delay to 500ms
-    const summary = await processEmailSummary(email.body, email.sender, email.subject);
-    summaries.push(summary);
-  }
+  // Parallelize requests for speed, backend handles caching/rate-limiting
+  const promises = mockEmails.map(email => 
+      summarizeViaBackend(email.subject, email.body).then(summary => ({
+          ...summary,
+          sender: email.sender // Restore sender
+      }))
+  );
 
-  return summaries;
+  return Promise.all(promises);
 };

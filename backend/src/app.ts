@@ -1,4 +1,3 @@
-
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
@@ -15,6 +14,7 @@ import marketplaceRoutes from './modules/marketplace/marketplace.routes';
 import wellbeingRoutes from './modules/wellbeing/wellbeing.routes';
 import profileRoutes from './modules/profile/profile.routes';
 import attendanceRoutes from './modules/attendance/attendance.routes';
+import assistantRoutes from './modules/assistant/assistant.routes'; // Added
 
 const app = express();
 
@@ -27,7 +27,8 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 // Static File Serving
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Replaced process.cwd() with path.resolve('.') to avoid type errors
+app.use('/uploads', express.static(path.join(path.resolve('.'), 'uploads')));
 
 // Routes
 app.use('/api/v1/auth', authRoutes);
@@ -39,6 +40,7 @@ app.use('/api/v1/marketplace', marketplaceRoutes);
 app.use('/api/v1/wellbeing', wellbeingRoutes);
 app.use('/api/v1/profile', profileRoutes);
 app.use('/api/v1/attendance', attendanceRoutes);
+app.use('/api/v1/assistant', assistantRoutes); // Added
 
 // Health Check
 app.get('/', (req, res) => {

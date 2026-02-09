@@ -3,7 +3,8 @@ import path from 'path';
 import fs from 'fs';
 
 // Ensure upload directory exists
-const uploadDir = path.join(__dirname, '../../uploads/avatars');
+// Replaced process.cwd() with path.resolve('.') to avoid type errors
+const uploadDir = path.join(path.resolve('.'), 'uploads/avatars');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }

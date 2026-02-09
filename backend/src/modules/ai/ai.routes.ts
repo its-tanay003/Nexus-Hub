@@ -1,12 +1,11 @@
+
 import { Router } from 'express';
-import { geminiService } from '../../services/gemini.service';
+import { summarizeText } from './ai.controller';
+import { authenticate } from '../../middleware/auth.middleware';
 
 const router = Router();
 
-router.post('/summarize', async (req, res) => {
-    const { subject, body } = req.body;
-    const result = await geminiService.summarizeEmail(subject, body);
-    res.json(result);
-});
+// Allow public access for demo, or protect with authenticate
+router.post('/summarize', summarizeText);
 
 export default router;

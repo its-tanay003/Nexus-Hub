@@ -1,11 +1,35 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card } from './Card';
 import { MailSummary } from '../types';
 import { fetchSimulatedMailSummaries } from '../services/geminiService';
+import { io } from 'socket.io-client';
 
 const Dashboard: React.FC = () => {
   const [mails, setMails] = useState<MailSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Real-time Mess Stats
+  const [messStats, setMessStats] = useState({
+    level: 45,
+    status: 'Moderate',
+    waitTime: '10 mins'
+  });
+
+  // Socket Connection for Mess Updates
+  useEffect(() => {
+    const socket = io('http://localhost:4000/mess', { transports: ['websocket'] });
+    
+    socket.on('connect', () => {
+      console.log("Dashboard connected to Mess stream");
+    });
+
+    socket.on('CROWD_UPDATE', (data: any) => {
+      setMessStats(data);
+    });
+
+    return () => { socket.disconnect(); };
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -24,6 +48,15 @@ const Dashboard: React.FC = () => {
     };
     loadData();
   }, []);
+
+  // Helper for Mess color coding
+  const getMessColor = (level: number) => {
+    if (level > 75) return { bg: 'bg-red-50', border: 'border-red-100', text: 'text-red-800', badge: 'bg-red-200' };
+    if (level > 40) return { bg: 'bg-orange-50', border: 'border-orange-100', text: 'text-orange-800', badge: 'bg-orange-200' };
+    return { bg: 'bg-green-50', border: 'border-green-100', text: 'text-green-800', badge: 'bg-green-200' };
+  };
+
+  const messColor = getMessColor(messStats.level);
 
   return (
     <div className="space-y-6">
@@ -73,9 +106,9 @@ const Dashboard: React.FC = () => {
           </div>
 
           <Card>
-            <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 mb-4 flex items-center justify-between">
-              <span className="text-orange-800 font-medium text-sm">📈 Mess Rush Level: <strong>Moderate</strong></span>
-              <span className="bg-orange-200 text-orange-800 text-xs px-2 py-1 rounded-full">Moderate</span>
+            <div className={`${messColor.bg} border ${messColor.border} rounded-lg p-3 mb-4 flex items-center justify-between transition-colors duration-500`}>
+              <span className={`${messColor.text} font-medium text-sm`}>📈 Mess Rush: <strong>{messStats.status}</strong> ({messStats.level}%)</span>
+              <span className={`${messColor.badge} ${messColor.text} text-xs px-2 py-1 rounded-full`}>{messStats.waitTime}</span>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 divide-y md:divide-y-0 md:divide-x divide-gray-100">

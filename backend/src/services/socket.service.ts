@@ -61,7 +61,8 @@ export class SocketService {
 
   public broadcastMessStats(stats: any) {
     if (this.io) {
-      this.io.of('/mess').emit('CROWD_UPDATE', stats);
+      // Broadcast to the specific room where clients are listening
+      this.io.of('/mess').to('live-updates').emit('CROWD_UPDATE', stats);
     }
   }
 

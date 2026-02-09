@@ -9,6 +9,7 @@ import LoginModal from './components/LoginModal';
 import ProfilePage from './components/ProfilePage';
 import AttendanceDashboard from './components/AttendanceDashboard'; 
 import TimetableDashboard from './components/Timetable/TimetableDashboard'; 
+import AssistantWidget from './components/Assistant/AssistantWidget'; // Added
 import { useAuth } from './context/AuthContext'; 
 import { ToastProvider } from './context/ToastContext';
 
@@ -23,6 +24,16 @@ const AppContent: React.FC = () => {
       clearPendingRedirect();
     }
   }, [isAuthenticated, pendingRedirect, clearPendingRedirect]);
+
+  // Listen for hash changes from AI navigation
+  useEffect(() => {
+    const handleHashChange = () => {
+        const hash = window.location.hash.replace('#/', '').replace('#', '');
+        if (hash) setActiveTab(hash);
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   const handleSOSTrigger = async (coords: { lat: number; lng: number }) => {
     console.log("SENDING SOS TO BACKEND:", coords);
@@ -160,6 +171,7 @@ const AppContent: React.FC = () => {
          </main>
       </div>
 
+      <AssistantWidget /> {/* Added here */}
       <SOSButton onTrigger={handleSOSTrigger} />
     </div>
   );
