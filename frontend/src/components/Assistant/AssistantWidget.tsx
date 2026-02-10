@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useSpeech } from '../../hooks/useSpeech';
 import { useAuth } from '../../context/AuthContext';
@@ -10,6 +9,7 @@ interface Message {
   timestamp: Date;
   isError?: boolean;
   originalQuery?: string;
+  navigationTarget?: string; // New field for navigation
 }
 
 const AssistantWidget: React.FC = () => {
@@ -40,6 +40,35 @@ const AssistantWidget: React.FC = () => {
     speak
   } = useSpeech(language);
 
+  // Track previous listening state for auto-send logic
+  const prevListeningRef = useRef(isListening);
+
+  const toggleCamera = () => {
+    setCameraActive(prev => !prev);
+  };
+
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    if (cameraActive) {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(s => {
+          stream = s;
+          if (videoRef.current) {
+            videoRef.current.srcObject = s;
+          }
+        })
+        .catch(err => {
+          console.error("Camera access failed:", err);
+          setCameraActive(false);
+        });
+    }
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [cameraActive]);
+
   // Auto-scroll chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -69,21 +98,25 @@ const AssistantWidget: React.FC = () => {
     if (transcript) setInputText(transcript);
   }, [transcript]);
 
-  // Toggle Camera
-  const toggleCamera = async () => {
-    if (cameraActive) {
-      const stream = videoRef.current?.srcObject as MediaStream;
-      stream?.getTracks().forEach(track => track.stop());
-      setCameraActive(false);
-    } else {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (videoRef.current) videoRef.current.srcObject = stream;
-        setCameraActive(true);
-      } catch (err) {
-        alert("Camera permission denied. Please enable it in browser settings.");
-      }
+  // Helper to map paths to labels
+  const getNavLabel = (path: string) => {
+    const cleanPath = path.replace('/', '').toLowerCase();
+    switch(cleanPath) {
+        case 'mess': return 'View Mess Menu';
+        case 'timetable': return 'Check Timetable';
+        case 'dashboard': return 'Go to Dashboard';
+        case 'explore': return 'Open Map';
+        case 'profile': return 'My Profile';
+        case 'academics': return 'Academic Cockpit';
+        case 'attendance': return 'View Attendance';
+        default: return 'View Details';
     }
+  };
+
+  // Execute Navigation
+  const handleNavigation = (path: string) => {
+      window.location.hash = path;
+      setIsOpen(false); // Close chat on navigation for better UX
   };
 
   // Send Query to Backend
@@ -132,14 +165,7 @@ const AssistantWidget: React.FC = () => {
       const data = await res.json();
       
       if (data.success) {
-        const aiMsg: Message = { 
-          id: Date.now() + 1, 
-          sender: 'ai', 
-          text: data.data.text, 
-          timestamp: new Date() 
-        };
-        setMessages(prev => [...prev, aiMsg]);
-        speak(data.data.text);
+        let navTarget = undefined;
 
         // Handle Navigation Intent
         if (data.data.navigate_to) {
@@ -152,9 +178,21 @@ const AssistantWidget: React.FC = () => {
                   timestamp: new Date() 
                 }]);
             } else {
-                window.location.hash = data.data.navigate_to;
+                // Instead of auto-navigating, we set it as a target for the UI
+                navTarget = data.data.navigate_to;
             }
         }
+
+        const aiMsg: Message = { 
+          id: Date.now() + 1, 
+          sender: 'ai', 
+          text: data.data.text, 
+          timestamp: new Date(),
+          navigationTarget: navTarget
+        };
+        setMessages(prev => [...prev, aiMsg]);
+        speak(data.data.text);
+
       } else {
         throw new Error(data.error || "Unknown error");
       }
@@ -171,6 +209,17 @@ const AssistantWidget: React.FC = () => {
       setIsProcessing(false);
     }
   };
+
+  // Auto-Send when listening stops
+  useEffect(() => {
+      if (prevListeningRef.current && !isListening) {
+          if (transcript.trim()) {
+              handleSend(transcript);
+          }
+      }
+      prevListeningRef.current = isListening;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isListening, transcript]);
 
   const suggestions = [
       { label: '🍔 Mess Menu', query: "What's on the menu today?" },
@@ -227,7 +276,7 @@ const AssistantWidget: React.FC = () => {
           {/* Camera Context View */}
           {cameraActive && (
             <div className="h-40 bg-black relative shrink-0 border-b border-gray-100">
-               <video ref={videoRef} autoPlay muted className="w-full h-full object-cover opacity-90" />
+               <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover opacity-90" />
                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-3">
                   <div className="flex items-center gap-2">
                      <span className="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
@@ -258,6 +307,22 @@ const AssistantWidget: React.FC = () => {
                           : 'bg-white text-gray-800 border border-gray-100 rounded-bl-none'
                   }`}>
                     {msg.text}
+
+                    {/* Navigation Suggestion Button */}
+                    {msg.navigationTarget && (
+                      <button
+                        onClick={() => handleNavigation(msg.navigationTarget!)}
+                        className="mt-3 w-full flex items-center justify-between bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl p-2 transition-colors group"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-lg bg-blue-500 text-white flex items-center justify-center shadow-sm">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
+                          </div>
+                          <span className="text-xs font-bold text-blue-700">{getNavLabel(msg.navigationTarget)}</span>
+                        </div>
+                        <svg className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                      </button>
+                    )}
                     
                     {msg.isError && msg.originalQuery && (
                         <button 

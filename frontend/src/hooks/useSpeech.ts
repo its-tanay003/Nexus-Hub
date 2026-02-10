@@ -43,15 +43,25 @@ export const useSpeech = (language: 'en' | 'hi' = 'en') => {
 
       recognitionRef.current = recognition;
     }
+
+    // Cleanup function to abort recognition when component unmounts or language changes
+    return () => {
+        if (recognitionRef.current) {
+            recognitionRef.current.abort();
+        }
+    };
   }, [language]);
 
   const startListening = useCallback(() => {
     if (recognitionRef.current) {
+      // Automatically stop the assistant from speaking if user starts listening
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      
       setTranscript('');
       try {
         recognitionRef.current.start();
       } catch (e) {
-        console.warn("Recognition already started");
+        console.warn("Recognition already started or failed to start", e);
       }
     } else {
       alert("Voice input not supported in this browser.");
@@ -77,7 +87,11 @@ export const useSpeech = (language: 'en' | 'hi' = 'en') => {
 
     // Optional: Select a better voice if available
     const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(v => v.lang.includes(language === 'hi' ? 'hi' : 'en'));
+    // Prioritize Google voices or Natural voices if available
+    const preferredVoice = voices.find(v => 
+        (v.name.includes('Google') || v.name.includes('Natural')) && 
+        v.lang.includes(language === 'hi' ? 'hi' : 'en')
+    );
     if (preferredVoice) utterance.voice = preferredVoice;
 
     utterance.onstart = () => setIsSpeaking(true);
